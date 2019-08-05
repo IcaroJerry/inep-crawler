@@ -29,8 +29,9 @@ def generate_subsections(data):
         subsections.append(Subsection(index=0, title='Todos', source=None))
         for index in range(len(children)):
             title_text = children[index].text if children[index] and children[index].text else None
+            url = children[index].get('href') if children[index] and children[index].get('href') else None
             if title_text:
-                subsections.append(Subsection(index=index + 1, title=title_text, source=data))
+                subsections.append(Subsection(index=index + 1, title=title_text, source=data, url=url))
 
     return subsections
 

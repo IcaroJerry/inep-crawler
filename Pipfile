@@ -8,7 +8,6 @@ verify_ssl = true
 [packages]
 beautifulsoup4 = "*"
 request = "*"
-pandas = "*"
 
 [requires]
 python_version = "3.7"

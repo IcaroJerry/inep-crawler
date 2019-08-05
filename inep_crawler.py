@@ -63,9 +63,13 @@ def main():
         print("Opção inválida")
         exit(1)
 
+    download_files = []
     #select subsection
     if selected_section.isDefault():
         print(f"Baixando todos os dados de todas as categorias...")
+        for section in sections:
+            for subsection in section.subsections():
+                download_files.append(subsection.url())
     elif selected_section.subsections:
         subsections = selected_section.subsections()
         for subsection in subsections:
@@ -83,6 +87,24 @@ def main():
             exit(1)
 
         print(f"Baixando dados de {selected_section} - {selected_subsection}...")
+        download_files.append(selected_subsection.url())
+
+    #TODO Async
+    for file in download_files:
+        file_name = file.split('/')[::-1][0]
+        print(f"Requisitando o arquivo {file_name}")
+        req = requests.get(file)
+
+        if req.status_code != 200:
+            print(
+                f"Ocorreu um erro com código {req.status_code} ao tentar baixar o arquivo {file_name}"
+            )
+        else:
+            #TODO save download info
+            open(file_name, 'wb').write(req.content)
+            print(
+                f"O arquivo {file} foi baixado com sucesso"
+            )
 
 
 if __name__ == "__main__":
