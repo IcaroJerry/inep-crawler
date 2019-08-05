@@ -3,7 +3,6 @@ import argparse
 import helpers
 import sys
 import settings
-import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 
