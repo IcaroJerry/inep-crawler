@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-import sys
 import settings
 from models import *
 
@@ -7,13 +6,12 @@ from models import *
 def generate_sections(data):
     sections = []
 
-    if len(data):
+    if len(data) > 0:
         sections.append(Section(index=0, title='Todos', subsections=[]))
-        for index in range(len(data)):
-            title = data[index].findChildren("h4")
-            title_text = title[0].text if title and title[0] and title[0].text else None
-            if title_text:
-                subsections = generate_subsections(data = data[index])
+        for index, element in enumerate(data):
+            title_text = element.xpath("//h4/text()").get() # TODO: checar se esse xpath retorna o child e, caso não retornar, usar só "h4/text()"
+            if title_text is not None and title_text != "":
+                subsections = generate_subsections(element)
                 section = Section(index=index+1, title=title_text, subsections=subsections, source=data)
                 sections.append(section)
 
@@ -23,15 +21,15 @@ def generate_sections(data):
 def generate_subsections(data):
     subsections = []
 
-    children = data.findChildren("a")
+    children = data.xpath("//a").getall()
 
-    if len(children):
+    if len(children) > 0:
         subsections.append(Subsection(index=0, title='Todos', source=None))
-        for index in range(len(children)):
-            title_text = children[index].text if children[index] and children[index].text else None
-            url = children[index].get('href') if children[index] and children[index].get('href') else None
-            if title_text:
-                subsections.append(Subsection(index=index + 1, title=title_text, source=data, url=url))
+        for index, element in enumerate(children):
+            title_text = element.xpath("text()").get()
+            url = element.xpath("@href").get()
+            if title_text is not None and title_text != "":
+                subsections.append(Subsection(index=index+1, title=title_text, source=data, url=url))
 
     return subsections
 
@@ -46,10 +44,8 @@ def print_welcome(title, subtitle):
     print("".join(str("#") for x in range(len_title * 2 + len_subtitle)))
     print(f"#\t{title}\t#")
     print(f"#\t{subtitle}\t#")
-    print("".join(str("#") for x in range(len_title * 2 + len_subtitle)))
-    print("")
+    print("".join(str("#") for x in range(len_title * 2 + len_subtitle)) + "\n")
     print(
-        f"Em caso de erro no programa, abra uma issue no link: { settings.OPEN_ISSUE_URL }"
+        f"Em caso de erro no programa, abra uma issue no link: { settings.OPEN_ISSUE_URL }\n"
     )
-    print("")
 

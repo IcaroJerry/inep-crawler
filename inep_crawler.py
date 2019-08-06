@@ -1,13 +1,14 @@
-# -*- coding: utf-8 -*-
+import asyncio
+import aiohttp
 import argparse
 import helpers
-import sys
 import settings
-import requests
-from bs4 import BeautifulSoup
+import os
+
+from parsel import Selector
 
 
-def main():
+async def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--url", type=str, help="URL para o site de microdados do INEP")
@@ -17,37 +18,27 @@ def main():
 
     if url is None:
         print("Nenhuma URL para base do INEP foi definida")
-        exit(1)
+        return
 
     helpers.print_init(url)
-    req = requests.get(url)
 
-    if req.status_code != 200:
-        print(
-            f"Ocorreu um erro com código {req.status_code} na requisição para a URL {url}"
-        )
-        exit(1)
-
-    content = req.content
-    soup = BeautifulSoup(content, "html.parser")
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as req:
+            req.raise_for_status()
+            content = await req.text()
     
-    title = soup.find("title")
-    page_update = soup.find("span", {"class": "page-update"})  # TODO Validate version
-    meta_data = soup.find(
-        "meta", {"property": "creator.productor"}
-    )  # TODO Validate version
+    sel = Selector(text=content)
 
-    helpers.print_welcome(title = title.text, subtitle = page_update.text)
+    title = sel.xpath("//title/text()").get()
+    page_update = sel.xpath("//span[@class='page-update']/text()").get()
+    meta_data = sel.xpath("//meta[@property='creator.productor']").get()
 
-    sections = helpers.generate_sections(soup.find_all(
-        lambda tag: tag.name == "div"
-        and tag.get("class")
-        and "anchor__content" in tag.get("class")
-        and tag.get("data-anchor")
-    ))
+    helpers.print_welcome(title=title, subtitle=page_update)
+
+    sections = helpers.generate_sections(sel.xpath("//div[contains(@class, 'anchor__content') and @data-anchor)]").getall())
 
     for section in sections:
-        print(f"{section}")
+        print(section)
 
     #select section
     try:
@@ -60,7 +51,7 @@ def main():
         print(f"Categoria escolhida: {selected_section}")
     except ValueError:
         print("Opção inválida")
-        exit(1)
+        return
 
     download_files = []
     #select subsection
@@ -79,32 +70,31 @@ def main():
             option = int(input("Opção: "))
             if option < 0 or option > len(subsections):
                 raise ValueError
-            
+    
             selected_subsection = subsections[option]
         except ValueError:
             print("Opção inválida")
-            exit(1)
+            return
 
         print(f"Baixando dados de {selected_section} - {selected_subsection}...")
         download_files.append(selected_subsection.url())
 
-    #TODO Async
-    for file in download_files:
-        file_name = file.split('/')[::-1][0]
-        print(f"Requisitando o arquivo {file_name}")
-        req = requests.get(file)
+    for f in download_files:
+        file_name = os.path.basename(f)
 
-        if req.status_code != 200:
-            print(
-                f"Ocorreu um erro com código {req.status_code} ao tentar baixar o arquivo {file_name}"
-            )
-        else:
-            #TODO save download info
-            open(file_name, 'wb').write(req.content)
-            print(
-                f"O arquivo {file} foi baixado com sucesso"
-            )
+        print(f"Requisitando o arquivo {file_name}")
+
+        async with aiohttp.ClientSession() as session:
+            async with session.get(file) as req:
+                req.raise_for_status()
+
+                with open(file_name, "wb") as output_f:
+                    async for chunk in req.content.iter_chunked(256):
+                        output_f.write(chunk)
+
+                print(f"O arquivo {f} foi baixado com sucesso!")
 
 
 if __name__ == "__main__":
-    main()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(main())
