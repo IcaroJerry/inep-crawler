@@ -29,13 +29,13 @@ async def main():
     
     sel = Selector(text=content)
 
-    title = sel.xpath("//title/text()").get()
-    page_update = sel.xpath("//span[@class='page-update']/text()").get()
-    meta_data = sel.xpath("//meta[@property='creator.productor']").get()
+    title = sel.xpath("normalize-space(string(//title))").get()
+    page_update = sel.xpath("normalize-space(string(//span[@class='page-update']))").get()
+    meta_data = sel.xpath("//meta[@property='creator.productor']/@content").get()
 
     helpers.print_welcome(title=title, subtitle=page_update)
 
-    sections = helpers.generate_sections(sel.xpath("//div[contains(@class, 'anchor__content') and @data-anchor)]").getall())
+    sections = helpers.generate_sections(sel.xpath("//div[contains(@class, 'anchor__content') and @data-anchor]").getall())
 
     for section in sections:
         print(section)
@@ -77,17 +77,29 @@ async def main():
             return
 
         print(f"Baixando dados de {selected_section} - {selected_subsection}...")
-        download_files.append(selected_subsection.url())
+        if selected_subsection.isDefault():
+            for subsection in selected_section.subsections():
+                download_files.append(subsection.url())
+        else:
+            download_files.append(selected_subsection.url())
+
+    storage_dir = settings.DATA_DIR
+    if not os.path.exists(storage_dir):
+        os.mkdir(storage_dir)
 
     for f in download_files:
+        if f is None:
+            continue
+
         file_name = os.path.basename(f)
 
         print(f"Requisitando o arquivo {file_name}")
 
         async with aiohttp.ClientSession() as session:
-            async with session.get(file) as req:
+            async with session.get(f, timeout=None) as req:
                 req.raise_for_status()
 
+                file_name = os.path.join(storage_dir, os.path.basename(f))
                 with open(file_name, "wb") as output_f:
                     async for chunk in req.content.iter_chunked(256):
                         output_f.write(chunk)

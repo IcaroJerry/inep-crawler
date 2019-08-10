@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import settings
 from models import *
-
+from parsel import Selector
 
 def generate_sections(data):
     sections = []
@@ -9,7 +9,8 @@ def generate_sections(data):
     if len(data) > 0:
         sections.append(Section(index=0, title='Todos', subsections=[]))
         for index, element in enumerate(data):
-            title_text = element.xpath("//h4/text()").get() # TODO: checar se esse xpath retorna o child e, caso não retornar, usar só "h4/text()"
+            sel = Selector(text=element)
+            title_text = sel.xpath("//h4/text()").get() # TODO: checar se esse xpath retorna o child e, caso não retornar, usar só "h4/text()"
             if title_text is not None and title_text != "":
                 subsections = generate_subsections(element)
                 section = Section(index=index+1, title=title_text, subsections=subsections, source=data)
@@ -21,13 +22,15 @@ def generate_sections(data):
 def generate_subsections(data):
     subsections = []
 
-    children = data.xpath("//a").getall()
+    sel = Selector(text=data)
+    children = sel.xpath("//a").getall()
 
     if len(children) > 0:
         subsections.append(Subsection(index=0, title='Todos', source=None))
         for index, element in enumerate(children):
-            title_text = element.xpath("text()").get()
-            url = element.xpath("@href").get()
+            sel = Selector(text=element)
+            title_text = sel.xpath("normalize-space(string(//a))").get()
+            url = sel.xpath("//a/@href").get()
             if title_text is not None and title_text != "":
                 subsections.append(Subsection(index=index+1, title=title_text, source=data, url=url))
 
