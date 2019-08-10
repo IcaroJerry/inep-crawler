@@ -26,21 +26,27 @@ async def main():
         async with session.get(url) as req:
             req.raise_for_status()
             content = await req.text()
-    
+
     sel = Selector(text=content)
 
     title = sel.xpath("normalize-space(string(//title))").get()
-    page_update = sel.xpath("normalize-space(string(//span[@class='page-update']))").get()
+    page_update = sel.xpath(
+        "normalize-space(string(//span[@class='page-update']))"
+    ).get()
     meta_data = sel.xpath("//meta[@property='creator.productor']/@content").get()
 
     helpers.print_welcome(title=title, subtitle=page_update)
 
-    sections = helpers.generate_sections(sel.xpath("//div[contains(@class, 'anchor__content') and @data-anchor]").getall())
+    sections = helpers.generate_sections(
+        sel.xpath(
+            "//div[contains(@class, 'anchor__content') and @data-anchor]"
+        ).getall()
+    )
 
     for section in sections:
         print(section)
 
-    #select section
+    # select section
     try:
         print(f"Escolha uma opção entre 0 e {len(sections) - 1}")
         option = int(input("Opção: "))
@@ -54,7 +60,7 @@ async def main():
         return
 
     download_files = []
-    #select subsection
+    # select subsection
     if selected_section.isDefault():
         print(f"Baixando todos os dados de todas as categorias...")
         for section in sections:
@@ -70,7 +76,7 @@ async def main():
             option = int(input("Opção: "))
             if option < 0 or option > len(subsections):
                 raise ValueError
-    
+
             selected_subsection = subsections[option]
         except ValueError:
             print("Opção inválida")

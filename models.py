@@ -3,7 +3,7 @@ import sys
 import settings
 
 
-class Section():
+class Section:
     def __init__(self, index, title, subsections, source=None):
         self._source = source
         self._index = index
@@ -23,7 +23,7 @@ class Section():
         return self._source is None
 
 
-class Subsection():
+class Subsection:
     def __init__(self, index, title, url=None, source=None):
         self._parent = None
         self._source = source
